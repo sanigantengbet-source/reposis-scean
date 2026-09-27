@@ -1,0 +1,66 @@
+@import "tailwindcss";
+@import "tw-animate-css";
+
+:root {
+  --bg-canvas: #0b0c0e;
+  --bg-surface: #121417;
+  --bg-elevated: #181b20;
+  --bg-subtle: #1f242b;
+  --border-subtle: #23272f;
+  --border-strong: #343b46;
+  --text-primary: #f3f4f6;
+  --text-secondary: #9ca3af;
+  --text-muted: #6b7280;
+  --accent-brand: #84cc16;
+  --accent-brand-hover: #65a30d;
+  --accent-brand-fg: #0b0c0e;
+
+  /* Security severity semantic variables */
+  --severity-critical: #ef4444;
+  --severity-critical-bg: rgba(239, 68, 68, 0.12);
+  --severity-critical-border: rgba(239, 68, 68, 0.35);
+
+  --severity-high: #f97316;
+  --severity-high-bg: rgba(249, 115, 22, 0.12);
+  --severity-high-border: rgba(249, 115, 22, 0.35);
+
+  --severity-medium: #eab308;
+  --severity-medium-bg: rgba(234, 179, 8, 0.12);
+  --severity-medium-border: rgba(234, 179, 8, 0.35);
+
+  --severity-low: #38bdf8;
+  --severity-low-bg: rgba(56, 189, 248, 0.12);
+  --severity-low-border: rgba(56, 189, 248, 0.35);
+
+  --severity-safe: #84cc16;
+  --severity-safe-bg: rgba(132, 204, 22, 0.12);
+  --severity-safe-border: rgba(132, 204, 22, 0.35);
+}
+
+body {
+  background-color: var(--bg-canvas);
+  background-image: radial-gradient(
+    rgba(255, 255, 255, 0.035) 1px,
+    transparent 0
+  );
+  background-size: 16px 16px;
+  color: var(--text-primary);
+  font-feature-settings: "cv02", "cv03", "cv04", "cv11";
+}
+
+@keyframes scan-indeterminate {
+  0% {
+    transform: translateX(-100%);
+  }
+  50% {
+    transform: translateX(60%);
+  }
+  100% {
+    transform: translateX(220%);
+  }
+}
+
+.animate-scan-bar {
+  animation: scan-indeterminate 1.8s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+}
+
