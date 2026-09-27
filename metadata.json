@@ -1,0 +1,6 @@
+{
+  "name": "RepoScan",
+  "description": "GitHub & Bitbucket Repository Security Scanner powered by ScanRepo static analysis.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
