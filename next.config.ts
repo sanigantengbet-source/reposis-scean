@@ -20,6 +20,17 @@ const nextConfig: NextConfig = {
     ],
   },
   output: 'standalone',
+  serverExternalPackages: ['scanrepo'],
+  outputFileTracingIncludes: {
+    '/api/scan': [
+      './node_modules/scanrepo/**/*',
+      './lib/scanrepo/github-fallback-preload.mjs',
+    ],
+    '/api/scan/route': [
+      './node_modules/scanrepo/**/*',
+      './lib/scanrepo/github-fallback-preload.mjs',
+    ],
+  },
   transpilePackages: ['motion'],
   webpack: (config, {dev}) => {
     // HMR is disabled in AI Studio via DISABLE_HMR env var.
