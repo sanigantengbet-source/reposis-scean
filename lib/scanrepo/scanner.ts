@@ -1,13 +1,15 @@
 import { execFile } from "node:child_process";
 import crypto from "node:crypto";
 import fs from "node:fs";
+import { createRequire } from "node:module";
 import os from "node:os";
 import path from "node:path";
+import { pathToFileURL } from "node:url";
 import { parseScanRepoOutput } from "@/lib/scanrepo/parser";
 import { ScanEngineError, type ScanResult } from "@/lib/scanrepo/types";
 import { validateAndNormalizeRepositoryUrl } from "@/lib/validations/scan";
 
-const DEFAULT_SCAN_TIMEOUT_MS = 120_000;
+const DEFAULT_SCAN_TIMEOUT_MS = 55_000;
 const IN_MEMORY_CACHE_TTL_MS = 10 * 60 * 1000; // 10 minutes in-memory cache (no database)
 const MAX_CACHE_ENTRIES = 25;
 
@@ -28,6 +30,40 @@ function getScanTimeoutMs(): number {
   return Math.min(parsed, 300_000);
 }
 
+function findExistingFile(candidates: string[]): string | null {
+  for (const candidate of candidates) {
+    try {
+      if (candidate && fs.existsSync(candidate)) {
+        return candidate;
+      }
+    } catch {
+      // ignore fs access errors
+    }
+  }
+  return null;
+}
+
+/**
+ * Explicit static path references analyzed by @vercel/nft during `next build`
+ * so Vercel Serverless Functions always bundle both scanrepo CLI and preload script.
+ */
+function ensureNftTracedPaths(): { cliPath: string; preloadPath: string } {
+  const cliPath = path.join(
+    process.cwd(),
+    "node_modules",
+    "scanrepo",
+    "dist",
+    "cli.js"
+  );
+  const preloadPath = path.join(
+    process.cwd(),
+    "lib",
+    "scanrepo",
+    "github-fallback-preload.mjs"
+  );
+  return { cliPath, preloadPath };
+}
+
 function resolveScanRepoExecution(
   normalizedUrl: string,
   githubToken?: string
@@ -37,25 +73,42 @@ function resolveScanRepoExecution(
     cliArgs.push("--token", githubToken.trim());
   }
 
-  const preloadPath = path.join(
-    process.cwd(),
-    "lib",
-    "scanrepo",
-    "github-fallback-preload.mjs"
-  );
+  const traced = ensureNftTracedPaths();
 
-  // Prefer direct invocation of installed scanrepo entry script to avoid npx cache writes in serverless environments
-  const localCliPath = path.join(
-    process.cwd(),
-    "node_modules",
-    "scanrepo",
-    "dist",
-    "cli.js"
-  );
+  let resolvedViaRequire = "";
+  try {
+    const req = createRequire(import.meta.url);
+    resolvedViaRequire = req.resolve("scanrepo/dist/cli.js");
+  } catch {
+    // fallback to path candidates below
+  }
 
-  if (fs.existsSync(localCliPath)) {
-    const nodeArgs = fs.existsSync(preloadPath)
-      ? ["--import", preloadPath, localCliPath, ...cliArgs]
+  const preloadCandidates = [
+    traced.preloadPath,
+    path.join("/var/task", "lib", "scanrepo", "github-fallback-preload.mjs"),
+    path.resolve(
+      process.cwd(),
+      ".next",
+      "server",
+      "lib",
+      "scanrepo",
+      "github-fallback-preload.mjs"
+    ),
+  ];
+
+  const cliCandidates = [
+    traced.cliPath,
+    resolvedViaRequire,
+    path.join("/var/task", "node_modules", "scanrepo", "dist", "cli.js"),
+  ];
+
+  const preloadPath = findExistingFile(preloadCandidates);
+  const localCliPath = findExistingFile(cliCandidates);
+
+  if (localCliPath) {
+    const preloadHref = preloadPath ? pathToFileURL(preloadPath).href : null;
+    const nodeArgs = preloadHref
+      ? ["--import", preloadHref, localCliPath, ...cliArgs]
       : [localCliPath, ...cliArgs];
 
     return {
